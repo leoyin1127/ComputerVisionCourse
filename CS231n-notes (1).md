@@ -1,35 +1,6 @@
-# CS231n
+# Computer Vision Course: Stanford CS231n
 
-### p2
-
-Object Recongnition
-
-ImageNet 
-
-2012 CNN
-
-### p3
-
-Image classification
-
-object detection
-
-CNN 
-
-2012 AlexNet: 7-8 layers
-
-1998 LeCun CNN born
-
-Why?
-
-1. Computation->large network
-2. Better data: high quality labeled datasets
-
- True, deep understanding of a picture, a long way to go
-
-piazza
-
-### p4 
+### Lec2 
 
 Image in computer: a giant grid of numbers ->the problem: Semantic Gap
 
