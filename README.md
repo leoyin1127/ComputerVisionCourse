@@ -1,4 +1,4 @@
-# CS321n Lecture Notes
+# CS231n Lecture Notes
 
 ## About
 
