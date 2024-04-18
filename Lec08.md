@@ -1,109 +1,107 @@
 ## Lecture 8 Summary
 
-#### Hardware and software 
+#### Hardware and Software Overview
 
-##### GPU
+##### GPUs: Specialized in Parallel Processing
 
-* Compared to CPU: more cores, but each core is much slower, and good at doing parallel tasks: Matrix multiplication
-* CUDA
-* Streaming multiprocessors: FP32 cores, Tensor Core (4x4 matrix)
+- **Core Comparison**: GPUs contain more cores than CPUs, but each core operates at a slower rate. This design is optimized for parallel tasks like matrix multiplication.
+- **CUDA**: A programming model that enables dramatic increases in computing performance by harnessing the power of the GPU.
+- **Streaming Multiprocessors**: These include FP32 cores and specialized Tensor Cores that are adept at handling 4x4 matrix operations.
 
-##### Pytorch
+##### Pytorch: A Versatile Machine Learning Framework
 
-* Tensor
-* Autograd
-  * ```python
-    Requires_grad = True
-    ```
-  * ```python
-    Loss.backward()
-    ```
-  * Gradients are **accumulated** into w1.grad and w2.grad and the graph is destroyed
-  * Set gradients to zero:
-    ```python
-    w1.grad.zero_()
-    w2.grad.zero_()
-    ```
-  * Tell pytorch not to build a graph for these operations:
-    ```python
-    with torch.no_grad():
-      # gradient descent...
-      for param in model.parameters():
-        param -= learning_rate * param.grad
-    ```
-  * Use optimizer to update params and zero gradients:
-    ```python
-    optimizer.step()
-    optimizer.zero_grad()
-    ```
-  * Can define new functions, but pytorch still creates computation graphs step by step (numerical unstable)
-  * Define new autograd operators by subclassing Function, define forward and backward:
-    ```python
-    class Sigmoid(torch.autograd.Function):
-      @staticmethod
-      def forward(ctx, input):
-        output = 1 / (1 + torch.exp(-input))
-        ctx.save_for_backward(output)
-        return output
-      
-      @staticmethod
-      def backward(ctx, grad_output):
-        output, = ctx.saved_tensors
-        grad_input = grad_output * output * (1 - output)
-        return grad_input
-    
-    def sigmoid(x):
-      return Sigmoid.apply(x)
-    ```
-    * Only adds one node to the graph
+###### Core Components
 
-* Module
-  * Define Modules as a torch.nn.Module subclass:
-    ```python
-    class TwoLayerNet(torch.nn.Module):
-      def __init__(self, D_in, H, D_out):
-        super(TwoLayerNet, self).__init__()
-        # ...
-        
-      def forward(self, x):
-        # ...
-        
-    	# no need to define backward - autograd will handle it
-    ```
-  * Stack multiple instances of the component in a sequential:
-    ```python
-    model = torch.nn.Sequential()
-    ```
+- **Tensor**: The primary data structure in Pytorch used for storing and manipulating data across a variety of machine learning models.
+- **Modules**: Defined as subclasses of `torch.nn.Module`, allowing for organized and modularized model creation. Example:
 
-* Pretrain Models: torchvision
-* tensorboard
-* Dynamic Computation Graphs:
-  * Building the graph and computing the graph happen at the same time
-  * let u use regular Python control flow during the forward pass
-  * Applications: model structure that depends on the input (**RNN**)
+  ```python
+  class TwoLayerNet(torch.nn.Module):
+    def __init__(self, D_in, H, D_out):
+      super(TwoLayerNet, self).__init__()
+      # Layer definition
+    def forward(self, x):
+      # Implementation of the forward pass
+  ```
 
-* Static Computation Graph:
-  1. Build computational graph describing our computation
-  2. Reuse the same graph on every iteration
-    ```python
-    @torch.jit.script # python function compiled to a graph when it is defined
-    ```
+  Sequential construction is also supported:
 
-|               | Static                                                                                                       | Dynamic                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| Optimization  | Framework can optimize the graph before it runs                                                              | None                                                                                   |
-| Serialization | Once the graph is built, can serialize it and run it without the code (tarin model in Python, deploy in C++) | Graph building and execution are intertwined, so always need to keep code around (RNN) |
-| Debugging     | Lots of indirection - can be hard to debug, benchmark, etc                                                   | The code u write is the code that runs. Easy to reason about, debug                    |
+  ```python
+  model = torch.nn.Sequential()
+  ```
 
-* Data parallel
-  * nn.DataParallel
-  * nn.DistributedDataParallel
+###### Autograd System
 
-##### TensorFlow
+- **Gradient Requirements**: Tensors for which gradients must be calculated are marked with `Requires_grad = True`.
+- **Backpropagation**: Implemented by calling `Loss.backward()`, which automatically computes the backward pass.
+- **Gradient Accumulation**: Gradients are accumulated into tensors like `w1.grad` and `w2.grad`; the computational graph is then discarded.
+- **Zeroing Gradients**: To reset gradients, Pytorch uses:
 
-* TF 1.0 (Static Graphs)
-  * Define computational graph
-  * run rhe graph many times
-* TF 2.0 (Dynamic Graphs)
-  * Static: @tf.function
-* Keras
+  ```python
+  w1.grad.zero_()
+  w2.grad.zero_()
+  ```
+
+- **Graph-Free Updates**: Updates without tracking through the computation graph:
+
+  ```python
+  with torch.no_grad():
+    for param in model.parameters():
+      param -= learning_rate * param.grad
+  ```
+
+- **Optimization Steps**: Simplifying parameter updates with optimizers:
+
+  ```python
+  optimizer.step()
+  optimizer.zero_grad()
+  ```
+
+- **Custom Autograd Functions**: Extending Pytorch's autograd by defining custom functions:
+
+  ```python
+  class Sigmoid(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, input):
+      # forward logic here
+    @staticmethod
+    def backward(ctx, grad_output):
+      # backward logic here
+  def sigmoid(x):
+    return Sigmoid.apply(x)
+  ```
+
+###### Computation Graph Dynamics
+
+- **Dynamic Graphs**: Pytorch's ability to build and compute graphs simultaneously facilitates the use of regular Python control flows, which is particularly beneficial for models like RNNs that depend on sequential data.
+
+- **Static Graphs**: These are built once and reused, enhancing efficiency and performance, especially in production environments where the input does not vary:
+
+  ```python
+  @torch.jit.script
+  ```
+
+  Comparing Graph Types:
+
+  | Feature       | Static                                   | Dynamic                                              |
+  | ------------- | ---------------------------------------- | ---------------------------------------------------- |
+  | Optimization  | Pre-execution optimization is possible   | Not applicable                                       |
+  | Serialization | Can be serialized and deployed code-free | Requires code presence for deployment                |
+  | Debugging     | More complex due to abstraction          | Simpler as code directly represents runtime behavior |
+
+###### Parallel Computing
+
+- **Data Parallelism**: Leveraging multiple GPUs to accelerate training processes via:
+  - `nn.DataParallel`
+  - `nn.DistributedDataParallel`
+
+##### TensorFlow Framework Evolution
+
+- **TF 1.0**: Utilizes static computation graphs that are defined once and executed multiple times.
+- **TF 2.0**: Introduces more flexibility with the `@tf.function` for creating static graphs within a dynamic programming environment.
+- **Keras**: Facilitates rapid prototyping and research through a high-level API that integrates seamlessly with TensorFlow.
+
+##### Additional Resources
+
+- **Pre-trained Models**: Accessible through `torchvision`.
+- **TensorBoard**: Enables detailed visualization and tracking of model training and performance metrics.
